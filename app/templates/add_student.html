@@ -1,0 +1,408 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+  .registration-container {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .form-section {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  @media (max-width: 850px) {
+    .form-section {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .camera-container {
+    background: #000;
+    border-radius: 1rem;
+    overflow: hidden;
+    position: relative;
+    aspect-ratio: 4/3;
+    border: 1px solid var(--border);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  #cameraVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .face-guide-overlay {
+    position: absolute;
+    inset: 0;
+    border: 2px dashed rgba(56, 189, 248, 0.3);
+    border-radius: 50%;
+    margin: 15% 25%;
+    pointer-events: none;
+    box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.4);
+    display: none;
+  }
+
+  .photo-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .preview-item {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    border: 2px solid var(--border);
+  }
+
+  .preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .remove-photo {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    background: var(--danger);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="registration-container">
+  <div style="margin-bottom: 2.5rem; display: flex; justify-content: space-between; align-items: flex-end;">
+    <div>
+      <h1 style="font-size: 1.875rem; font-weight: 800; letter-spacing: -0.025em;">Register Student</h1>
+      <p style="color: var(--text-muted);">Enroll a new student profile into the recognition engine.</p>
+    </div>
+    <a href="{{ url_for('students.students') }}" class="btn btn-secondary">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m15 18-6-6 6-6" />
+      </svg>
+      Back to Directory
+    </a>
+  </div>
+
+  {% if not recognition_enabled %}
+  <div class="alert alert-error" style="margin-bottom: 2rem;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 0.75rem;">
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </svg>
+    Recognition engine is offline. Profiles can be registered but not verified.
+  </div>
+  {% endif %}
+
+  <form id="addStudentForm" action="{{ url_for('students.add_student') }}" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+    <div class="form-section">
+      <!-- Left Side: Metadata -->
+      <div class="card">
+        <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1.5rem; color: var(--accent);">Student Details</h3>
+
+        <div class="input-group">
+          <label for="student_id">NISN / Identification ID</label>
+          <input id="student_id" name="student_id" type="text" required placeholder="Contoh: 1234567890" />
+        </div>
+
+        <div class="input-group">
+          <label for="name">Full Name</label>
+          <input id="name" name="name" type="text" required placeholder="John Doe" />
+        </div>
+
+        <div class="input-group">
+          <label for="gender">Jenis Kelamin</label>
+          <select id="gender" name="gender" required>
+            <option value="">Pilih jenis kelamin...</option>
+            <option value="Laki-laki">Laki-laki</option>
+            <option value="Perempuan">Perempuan</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label for="class_name">Assigned Class</label>
+          <select id="class_name_select" onchange="document.getElementById('class_name').value = this.value">
+            <option value="">Select Class...</option>
+            <option value="10A">10A</option>
+            <option value="10B">10B</option>
+            <option value="11A">11A</option>
+            <option value="11B">11B</option>
+            <option value="12A">12A</option>
+            <option value="12B">12B</option>
+          </select>
+          <input id="class_name" name="class_name" type="text" required placeholder="Or type custom class"
+            style="margin-top: 0.5rem;" />
+        </div>
+
+        <div class="input-group">
+          <label for="birth_place">Tempat Lahir</label>
+          <input id="birth_place" name="birth_place" type="text" required placeholder="Contoh: Mataram" />
+        </div>
+
+        <div class="input-group">
+          <label for="birth_date">Tanggal Lahir</label>
+          <input id="birth_date" name="birth_date" type="date" required />
+        </div>
+
+        <div class="input-group">
+          <label for="religion">Agama</label>
+          <input id="religion" name="religion" type="text" required placeholder="Contoh: Islam" />
+        </div>
+
+        <div class="input-group">
+          <label for="address">Alamat</label>
+          <textarea id="address" name="address" rows="3" required placeholder="Alamat lengkap siswa"></textarea>
+        </div>
+
+        <div class="input-group" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
+          <label for="photos">File Upload (Optional)</label>
+          <input id="photos" name="photos" type="file" accept="image/*" multiple />
+          <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Upload existing facial photos
+            (JPG/PNG).</p>
+        </div>
+
+        <div style="margin-top: 2rem;">
+          <button id="submitBtn" class="btn btn-primary" style="width: 100%;" type="submit">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+              <polyline points="17 21 17 13 7 13 7 21" />
+              <polyline points="7 3 7 8 15 8" />
+            </svg>
+            Submit Profile
+          </button>
+        </div>
+      </div>
+
+      <!-- Right Side: Camera Capture -->
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h3 style="font-size: 1rem; font-weight: 700; color: var(--accent);">Biometric Enrollment</h3>
+          <span id="captureCount" class="badge badge-success">0 Photos</span>
+        </div>
+
+        <div class="camera-container">
+          <video id="cameraVideo" autoplay playsinline></video>
+          <div id="faceGuide" class="face-guide-overlay"></div>
+
+          <div id="cameraControls"
+            style="position: absolute; bottom: 1rem; left: 0; right: 0; display: flex; justify-content: center; gap: 0.75rem; z-index: 10;">
+            <button id="startCameraBtn" class="btn btn-secondary" type="button"
+              style="background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(4px);">
+              Activate Camera
+            </button>
+            <button id="captureBtn" class="btn btn-primary" type="button" disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                <circle cx="12" cy="13" r="3" />
+              </svg>
+              Capture
+            </button>
+          </div>
+        </div>
+
+        <select id="cameraSelect" style="width: 100%; margin-top: 1rem; display: none;">
+          <option value="">Searching for cameras...</option>
+        </select>
+
+        <div id="cameraError"
+          style="color: var(--danger); font-size: 0.875rem; margin-top: 0.75rem; text-align: center;"></div>
+
+        <div style="margin-top: 1.5rem;">
+          <h4 style="font-size: 0.875rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem;">
+            Enrollment Slots</h4>
+          <div id="capturedGrid" class="photo-preview-grid">
+            <!-- Placeholders -->
+            {% for i in range(5) %}
+            <div class="preview-item" style="background: rgba(255,255,255,0.02); border-style: dashed;"></div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+  (function () {
+    const form = document.getElementById('addStudentForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const startBtn = document.getElementById('startCameraBtn');
+    const captureBtn = document.getElementById('captureBtn');
+    const video = document.getElementById('cameraVideo');
+    const capturedGrid = document.getElementById('capturedGrid');
+    const captureCount = document.getElementById('captureCount');
+    const cameraError = document.getElementById('cameraError');
+    const photosInput = document.getElementById('photos');
+    const cameraSelect = document.getElementById('cameraSelect');
+
+    let stream = null;
+    let captured = [];
+
+    function updateCount() {
+      captureCount.textContent = captured.length + ' Photos';
+    }
+
+    function renderCaptured() {
+      capturedGrid.innerHTML = '';
+      captured.forEach((item, i) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'preview-item';
+
+        const img = document.createElement('img');
+        img.src = item.url;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'remove-photo';
+        btn.innerHTML = '&times;';
+        btn.onclick = () => {
+          URL.revokeObjectURL(item.url);
+          captured.splice(i, 1);
+          renderCaptured();
+        };
+
+        wrap.appendChild(img);
+        wrap.appendChild(btn);
+        capturedGrid.appendChild(wrap);
+      });
+
+      // Add placeholders back
+      for (let i = captured.length; i < 5; i++) {
+        const p = document.createElement('div');
+        p.className = 'preview-item';
+        p.style.background = 'rgba(255,255,255,0.02)';
+        p.style.borderStyle = 'dashed';
+        capturedGrid.appendChild(p);
+      }
+      updateCount();
+    }
+
+    async function getCameras() {
+      try {
+        await navigator.mediaDevices.getUserMedia({ video: true });
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+
+        cameraSelect.innerHTML = '<option value="">Default Selection</option>';
+        videoDevices.forEach(device => {
+          const option = document.createElement('option');
+          option.value = device.deviceId;
+          option.text = device.label || `Camera ${cameraSelect.length}`;
+          cameraSelect.appendChild(option);
+        });
+
+        if (videoDevices.length > 0) cameraSelect.style.display = 'block';
+      } catch (e) { console.error(e); }
+    }
+
+    async function startCamera() {
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      cameraError.textContent = '';
+
+      const constraints = {
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          deviceId: cameraSelect.value ? { exact: cameraSelect.value } : undefined
+        }
+      };
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream;
+        captureBtn.disabled = false;
+        startBtn.textContent = 'Change Camera';
+        document.getElementById('faceGuide').style.display = 'block';
+      } catch (e) {
+        cameraError.textContent = 'Unable to access camera. Please check permissions.';
+        captureBtn.disabled = true;
+      }
+    }
+
+    function capturePhoto() {
+      if (captured.length >= 10) return alert('Maximum 10 photos reached.');
+
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        captured.push({ blob, url });
+        renderCaptured();
+      }, 'image/jpeg', 0.9);
+    }
+
+    cameraSelect.addEventListener('change', startCamera);
+    startBtn.addEventListener('click', () => {
+      if (cameraSelect.options.length <= 1) getCameras().then(startCamera);
+      else startCamera();
+    });
+    captureBtn.addEventListener('click', capturePhoto);
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const hostFiles = photosInput.files ? Array.from(photosInput.files) : [];
+
+      if (hostFiles.length === 0 && captured.length === 0) {
+        return alert('Please provide at least one facial photo.');
+      }
+
+      captured.forEach((item, i) => {
+        const file = new File([item.blob], `enrollment_${i + 1}.jpg`, { type: 'image/jpeg' });
+        formData.append('photos', file);
+      });
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Processing Biometrics...';
+
+      try {
+        const res = await fetch(form.action, {
+          method: 'POST',
+          headers: { 'Accept': 'application/json' },
+          body: formData
+        });
+        const data = await res.json();
+        if (data.success) window.location.href = "{{ url_for('students.students') }}";
+        else alert(data.message || 'Error occurred');
+      } catch (err) { alert('Server communication failed.'); }
+      finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Profile';
+      }
+    });
+
+    window.addEventListener('beforeunload', () => {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      captured.forEach(c => URL.revokeObjectURL(c.url));
+    });
+  })();
+</script>
+{% endblock %}

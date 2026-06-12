@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Bulk Upload Siswa</h1>
+<p class="muted">Impor data siswa secara massal menggunakan file CSV.</p>
+
+<div class="card" style="max-width: 600px; margin-bottom: 20px;">
+    <div style="font-weight: 700; margin-bottom: 10px;">Format CSV</div>
+    <p class="muted" style="font-size: 0.9em; line-height: 1.5;">
+        File harus memiliki header berikut:<br>
+        <code>student_id, name, class_name, gender, birth_place, birth_date, religion, address</code><br><br>
+        Contoh isi file:<br>
+        <code>1234567890, Ahmad Fauzi, 10A, Laki-laki, Mataram, 2007-01-12, Islam, Jl. Pendidikan No. 1</code><br>
+        <code>1234567891, Budi Santoso, 10B, Perempuan, Tanjung, 2007-05-04, Islam, Jl. Sekolah No. 2</code>
+    </p>
+</div>
+
+<form action="{{ url_for('students.bulk_upload') }}" method="post" enctype="multipart/form-data" class="card"
+    style="max-width: 600px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+    <label for="csv_file" style="display:block; font-weight:700; margin-bottom:10px;">Pilih File CSV</label>
+    <input type="file" id="csv_file" name="csv_file" accept=".csv" required
+        style="width: 100%; padding: 10px; border: 1px dashed #ced4da; border-radius: 8px;" />
+
+    <div style="margin-top: 20px; display: flex; gap: 10px; align-items: center;">
+        <button type="submit" class="btn" style="background: #3b82f6;">Unggah & Proses</button>
+        <a href="{{ url_for('students.students') }}" class="muted" style="text-decoration:none;">Batal</a>
+    </div>
+</form>
+
+{% if results %}
+<div class="card" style="max-width: 600px; margin-top: 20px; border-left: 4px solid #3b82f6;">
+    <div style="font-weight: 700; margin-bottom: 10px;">Hasil Impor</div>
+    <ul style="font-size: 0.9em; padding-left: 20px;">
+        <li>Total Data: {{ results.total }}</li>
+        <li style="color: #16a34a;">Berhasil: {{ results.success }}</li>
+        <li style="color: #dc2626;">Gagal: {{ results.failed }}</li>
+    </ul>
+    {% if results.errors %}
+    <div style="margin-top: 10px; font-size: 0.85em; background: #fee2e2; padding: 10px; border-radius: 6px;">
+        <strong>Error:</strong>
+        <ul style="margin: 5px 0 0 15px;">
+            {% for err in results.errors %}
+            <li>Row {{ err.row }}: {{ err.msg }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

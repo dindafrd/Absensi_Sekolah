@@ -1,0 +1,566 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+  .attendance-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 2rem;
+  }
+
+  @media (max-width: 1000px) {
+    .attendance-container {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .camera-view {
+    position: relative;
+    border-radius: 1.5rem;
+    overflow: hidden;
+    background: #000;
+    aspect-ratio: 16/9;
+    border: 1px solid var(--border);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  #attendanceVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .focus-bracket {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    border: 2px solid rgba(56, 189, 248, 0.5);
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .bracket-tl {
+    top: 20%;
+    left: 30%;
+    border-right: none;
+    border-bottom: none;
+  }
+
+  .bracket-tr {
+    top: 20%;
+    right: 30%;
+    border-left: none;
+    border-bottom: none;
+  }
+
+  .bracket-bl {
+    bottom: 20%;
+    left: 30%;
+    border-right: none;
+    border-top: none;
+  }
+
+  .bracket-br {
+    bottom: 20%;
+    right: 30%;
+    border-left: none;
+    border-top: none;
+  }
+
+  .detection-flash {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    transition: background 0.3s;
+  }
+
+  .kiosk-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(8px);
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    color: var(--accent);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+  }
+
+  .log-item {
+    padding: 1rem;
+    border-radius: 0.75rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border);
+    margin-bottom: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    animation: slideIn 0.3s ease-out;
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .scanning-animation {
+    position: absolute;
+    height: 2px;
+    width: 100%;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    top: 0;
+    left: 0;
+    display: none;
+    z-index: 15;
+    animation: scanLine 3s infinite linear;
+  }
+
+  @keyframes scanLine {
+    0% {
+      top: 0;
+    }
+
+    100% {
+      top: 100%;
+    }
+  }
+
+  #faceGuideCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 12;
+  }
+
+  .face-count-badge {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 2rem;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    z-index: 20;
+    display: none;
+  }
+
+  .cam-selector-btn {
+    background: rgba(30, 41, 59, 0.8);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+  }
+
+  .cam-selector-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="attendance-container">
+  <!-- Left Side: Camera -->
+  <div>
+    <div style="margin-bottom: 2rem;">
+      <h1 style="font-size: 1.875rem; font-weight: 800; letter-spacing: -0.025em;">Attendance Kiosk</h1>
+      <p style="color: var(--text-muted);">Real-time biometric recognition for automated attendance marking.</p>
+    </div>
+
+    <div class="camera-view">
+      <video id="attendanceVideo" autoplay playsinline muted></video>
+      <canvas id="faceGuideCanvas"></canvas>
+      <div id="detectionFlash" class="detection-flash"></div>
+      <div id="scanLine" class="scanning-animation"></div>
+
+      <!-- Focus Brackets for Premium feel -->
+      <div class="focus-bracket bracket-tl"></div>
+      <div class="focus-bracket bracket-tr"></div>
+      <div class="focus-bracket bracket-bl"></div>
+      <div class="focus-bracket bracket-br"></div>
+
+      <span id="faceCountBadge" class="face-count-badge">0 wajah terdeteksi</span>
+
+      <div id="kioskStatus" class="kiosk-badge">
+        <span
+          style="display: block; width: 6px; height: 6px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px #22c55e;"></span>
+        <span id="kioskCountdown">Kiosk Active</span>
+      </div>
+
+      <div
+        style="position: absolute; bottom: 1.5rem; left: 0; right: 0; display: flex; justify-content: center; gap: 1rem; z-index: 20; flex-wrap: wrap;">
+        <button id="startBtn" class="btn btn-secondary"
+          style="background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(8px);">
+          Enable Camera
+        </button>
+        <button id="switchCamBtn" class="cam-selector-btn" style="display:none;" title="Switch Camera">
+          &#x21C4; Switch
+        </button>
+        <button id="captureBtn" class="btn btn-primary" disabled>
+          &#x1F4F7; Take Attendance
+        </button>
+      </div>
+    </div>
+
+    <div class="card"
+      style="margin-top: 1.5rem; display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem;">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <div
+          style="width: 44px; height: 44px; border-radius: 50%; background: rgba(56, 189, 248, 0.1); display: flex; align-items: center; justify-content: center; color: var(--accent);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+          </svg>
+        </div>
+        <div>
+          <div style="font-weight: 700; font-size: 0.875rem;">Automatic Discovery</div>
+          <p style="font-size: 0.75rem; color: var(--text-muted);">Enable hands-free kiosk mode for continuous scanning.
+          </p>
+        </div>
+      </div>
+      <div class="input-group" style="flex-direction: row; align-items: center; gap: 0.75rem; margin-bottom: 0;">
+        <label for="autoScanToggle" style="margin-bottom: 0; font-size: 0.875rem; font-weight: 600;">Kiosk Mode</label>
+        <input type="checkbox" id="autoScanToggle" disabled style="width: 20px; height: 20px;" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side: Logs -->
+  <div>
+    <div style="margin-bottom: 1.5rem;">
+      <h3 style="font-size: 1.125rem; font-weight: 700;">Live Feed Activity</h3>
+      <p style="font-size: 0.875rem; color: var(--text-muted);">Recent attendance logs and recognition results.</p>
+    </div>
+
+    <div id="attendanceMessage" style="margin-bottom: 1.5rem; display: none;">
+      <!-- Dynamic Highlight Card for Top Match -->
+    </div>
+
+    <div id="logContainer">
+      <div style="text-align: center; padding: 3rem 1rem; opacity: 0.5;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+          style="margin-bottom: 1rem;">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 6v6l4 2" />
+        </svg>
+        <p>Awaiting biometric input...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const recognitionEnabled = document.documentElement.getAttribute('data-recognition-enabled') === 'true';
+    const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : '';
+
+    const startBtn = document.getElementById('startBtn');
+    const captureBtn = document.getElementById('captureBtn');
+    const switchCamBtn = document.getElementById('switchCamBtn');
+    const autoToggle = document.getElementById('autoScanToggle');
+    const video = document.getElementById('attendanceVideo');
+    const canvas = document.getElementById('faceGuideCanvas');
+    const ctx = canvas.getContext('2d');
+    const flash = document.getElementById('detectionFlash');
+    const scanLine = document.getElementById('scanLine');
+    const kioskBadge = document.getElementById('kioskStatus');
+    const kioskCountdown = document.getElementById('kioskCountdown');
+    const faceCountBadge = document.getElementById('faceCountBadge');
+    const logs = document.getElementById('logContainer');
+    const mainMsg = document.getElementById('attendanceMessage');
+
+    let stream = null;
+    let autoInterval = null;
+    let countdownInterval = null;
+    let cameraDevices = [];
+    let currentDeviceIndex = 0;
+    let faceDetector = null;
+    let guideAnimFrame = null;
+
+    // ── Face guide overlay ──────────────────────────────────────────
+    function resizeCanvas() {
+      canvas.width = video.videoWidth || canvas.offsetWidth;
+      canvas.height = video.videoHeight || canvas.offsetHeight;
+    }
+
+    function drawFaceGuide(faceCount) {
+      resizeCanvas();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!stream) return;
+
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2.1;
+      const rx = canvas.width * 0.18;
+      const ry = canvas.height * 0.38;
+
+      const hasface = faceCount > 0;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
+      ctx.strokeStyle = hasface ? 'rgba(34,197,94,0.75)' : 'rgba(56,189,248,0.45)';
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash(hasface ? [] : [10, 6]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Guide label
+      if (!hasface) {
+        ctx.font = 'bold 13px system-ui, sans-serif';
+        ctx.fillStyle = 'rgba(148,163,184,0.9)';
+        ctx.textAlign = 'center';
+        ctx.fillText('Arahkan wajah ke dalam oval', cx, cy + ry + 22);
+      }
+    }
+
+    // ── Browser FaceDetector API (optional, best-effort) ──────────
+    async function tryLoadFaceDetector() {
+      if ('FaceDetector' in window) {
+        try {
+          faceDetector = new FaceDetector({ fastMode: true, maxDetectedFaces: 5 });
+        } catch (_) { faceDetector = null; }
+      }
+    }
+    tryLoadFaceDetector();
+
+    let lastFaceCount = 0;
+    function startGuideLoop() {
+      function loop() {
+        if (!stream) return;
+        if (faceDetector && video.readyState >= 2) {
+          faceDetector.detect(video).then(faces => {
+            lastFaceCount = faces.length;
+            faceCountBadge.textContent = `${faces.length} wajah terdeteksi`;
+            drawFaceGuide(faces.length);
+          }).catch(() => drawFaceGuide(lastFaceCount));
+        } else {
+          drawFaceGuide(lastFaceCount);
+        }
+        guideAnimFrame = requestAnimationFrame(loop);
+      }
+      loop();
+    }
+
+    function stopGuideLoop() {
+      if (guideAnimFrame) cancelAnimationFrame(guideAnimFrame);
+      guideAnimFrame = null;
+    }
+
+    // ── Audio feedback ─────────────────────────────────────────────
+    function beep(freq, duration) {
+      try {
+        const actx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = actx.createOscillator();
+        const gain = actx.createGain();
+        osc.connect(gain);
+        gain.connect(actx.destination);
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.1, actx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + duration / 1000);
+        osc.start();
+        osc.stop(actx.currentTime + duration / 1000);
+      } catch (_) { }
+    }
+
+    // ── Log panel ──────────────────────────────────────────────────
+    function addLog(message, ok) {
+      if (logs.querySelector('svg')) logs.innerHTML = '';
+      const item = document.createElement('div');
+      item.className = 'log-item';
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      item.innerHTML = `
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <div style="width:10px;height:10px;border-radius:50%;background:${ok ? '#22c55e' : '#ef4444'};flex-shrink:0;"></div>
+          <div>
+            <div style="font-weight:700;font-size:0.875rem;">${message}</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">${time}</div>
+          </div>
+        </div>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="${ok ? '#22c55e' : '#ef4444'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="${ok ? 'M20 6 9 17l-5-5' : 'm18 6-12 12M6 6l12 12'}"/>
+        </svg>`;
+      logs.prepend(item);
+      if (logs.children.length > 8) logs.removeChild(logs.lastChild);
+      flash.style.background = ok ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)';
+      beep(ok ? 880 : 220, ok ? 200 : 300);
+      setTimeout(() => flash.style.background = 'transparent', 500);
+    }
+
+    // ── Camera helpers ─────────────────────────────────────────────
+    async function enumerateCameras() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        cameraDevices = devices.filter(d => d.kind === 'videoinput');
+      } catch (_) { cameraDevices = []; }
+    }
+
+    async function startCamera(deviceId) {
+      try {
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        stopGuideLoop();
+
+        const constraints = {
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 30 },
+            ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'user' })
+          }
+        };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream;
+        await new Promise(r => video.addEventListener('loadedmetadata', r, { once: true }));
+
+        captureBtn.disabled = false;
+        autoToggle.disabled = false;
+        startBtn.textContent = 'Restart Camera';
+        scanLine.style.display = 'block';
+        faceCountBadge.style.display = 'block';
+
+        await enumerateCameras();
+        switchCamBtn.style.display = cameraDevices.length > 1 ? 'inline-block' : 'none';
+
+        startGuideLoop();
+      } catch (e) {
+        addLog('Tidak dapat mengakses kamera: ' + (e.message || 'Izin ditolak.'), false);
+      }
+    }
+
+    // ── Image quality pre-check (client-side) ──────────────────────
+    function checkImageBrightness(imageData) {
+      const d = imageData.data;
+      let sum = 0;
+      for (let i = 0; i < d.length; i += 4) sum += (d[i] + d[i+1] + d[i+2]) / 3;
+      return sum / (d.length / 4);
+    }
+
+    // ── Capture & submit ───────────────────────────────────────────
+    async function markAttendance() {
+      if (!stream || captureBtn.disabled) return;
+
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = video.videoWidth;
+      tempCanvas.height = video.videoHeight;
+      const tctx = tempCanvas.getContext('2d');
+      tctx.drawImage(video, 0, 0);
+
+      // Client-side brightness check
+      const imgData = tctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+      const brightness = checkImageBrightness(imgData);
+      if (brightness < 15) {
+        addLog('Gambar terlalu gelap, perbaiki pencahayaan.', false);
+        return;
+      }
+
+      const dataUrl = tempCanvas.toDataURL('image/jpeg', 0.9);
+
+      if (!autoInterval) {
+        captureBtn.disabled = true;
+        captureBtn.textContent = 'Memproses...';
+      }
+
+      try {
+        const res = await fetch("{{ url_for('attendance.mark_attendance_api') }}", {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+          body: JSON.stringify({ image: dataUrl })
+        });
+        const data = await res.json();
+        const skip = autoInterval && data.message === 'Wajah tidak dikenali.';
+        if (!skip) addLog(data.message, data.success);
+
+        if (data.success) {
+          lastFaceCount = 0; // Reset so guide redraws
+        }
+      } catch (_) {
+        if (!autoInterval) addLog('Kesalahan koneksi, coba lagi.', false);
+      } finally {
+        if (!autoInterval) {
+          captureBtn.disabled = false;
+          captureBtn.textContent = '📷 Take Attendance';
+        }
+      }
+    }
+
+    // ── Kiosk mode countdown ───────────────────────────────────────
+    const KIOSK_INTERVAL_MS = 5000;
+
+    function startKiosk() {
+      captureBtn.style.display = 'none';
+      kioskBadge.style.display = 'flex';
+      let remaining = KIOSK_INTERVAL_MS / 1000;
+      kioskCountdown.textContent = `Scan dalam ${remaining}s`;
+
+      markAttendance();
+
+      autoInterval = setInterval(markAttendance, KIOSK_INTERVAL_MS);
+      countdownInterval = setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0) remaining = KIOSK_INTERVAL_MS / 1000;
+        kioskCountdown.textContent = `Scan dalam ${remaining}s`;
+      }, 1000);
+    }
+
+    function stopKiosk() {
+      captureBtn.style.display = 'inline-flex';
+      kioskBadge.style.display = 'none';
+      clearInterval(autoInterval);
+      clearInterval(countdownInterval);
+      autoInterval = null;
+      countdownInterval = null;
+      kioskCountdown.textContent = 'Kiosk Active';
+    }
+
+    // ── Event listeners ────────────────────────────────────────────
+    startBtn.addEventListener('click', () => {
+      currentDeviceIndex = 0;
+      startCamera(cameraDevices[currentDeviceIndex]?.deviceId);
+    });
+
+    switchCamBtn.addEventListener('click', () => {
+      if (cameraDevices.length < 2) return;
+      currentDeviceIndex = (currentDeviceIndex + 1) % cameraDevices.length;
+      startCamera(cameraDevices[currentDeviceIndex]?.deviceId);
+    });
+
+    captureBtn.addEventListener('click', markAttendance);
+
+    autoToggle.addEventListener('change', () => {
+      if (autoToggle.checked) startKiosk(); else stopKiosk();
+    });
+
+    window.addEventListener('beforeunload', () => {
+      stopGuideLoop();
+      if (stream) stream.getTracks().forEach(t => t.stop());
+    });
+  })();
+</script>
+{% endblock %}
