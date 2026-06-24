@@ -1,0 +1,40 @@
+C:\Users\Rizki Firmansyah\Documents\CODIBG\Face_Recognition\app\config.py:36: RuntimeWarning: SECRET_KEY not set in environment. Auto-generated key will change on each restart. Set SECRET_KEY in .env file for consistent sessions. Generate with: python -c "import secrets; print(secrets.token_hex(32))"
+  warnings.warn(
+[2026-06-03 20:38:14,877] INFO in __init__: ============================================================
+2026-06-03 20:38:14,877 [INFO] ============================================================
+[2026-06-03 20:38:14,879] INFO in __init__: Face Recognition Attendance System
+2026-06-03 20:38:14,879 [INFO] Face Recognition Attendance System
+[2026-06-03 20:38:14,879] INFO in __init__: Institution: SMA N 1 KAYANGAN
+2026-06-03 20:38:14,879 [INFO] Institution: SMA N 1 KAYANGAN
+[2026-06-03 20:38:14,886] INFO in __init__: Environment: Production
+2026-06-03 20:38:14,886 [INFO] Environment: Production
+[2026-06-03 20:38:14,886] INFO in __init__: Database: sqlite:///C:\Users\Rizki Firmansyah\Documents\CODIBG\Face_Recognition\data\attendance.db
+2026-06-03 20:38:14,886 [INFO] Database: sqlite:///C:\Users\Rizki Firmansyah\Documents\CODIBG\Face_Recognition\data\attendance.db
+[2026-06-03 20:38:14,890] INFO in __init__: Log Level: INFO
+2026-06-03 20:38:14,890 [INFO] Log Level: INFO
+[2026-06-03 20:38:14,894] INFO in __init__: ============================================================
+2026-06-03 20:38:14,894 [INFO] ============================================================
+[2026-06-03 20:38:14,894] INFO in __init__: Performing automatic database backup...
+2026-06-03 20:38:14,894 [INFO] Performing automatic database backup...
+[2026-06-03 20:38:14,905] INFO in database: Database backup created: data\backups\attendance_backup_20260603_203814.db (0.08 MB)
+2026-06-03 20:38:14,905 [INFO] Database backup created: data\backups\attendance_backup_20260603_203814.db (0.08 MB)
+[2026-06-03 20:38:14,912] INFO in database: Cleaned up 1 old backups: ['data\\backups\\attendance_backup_20260414_033432.db']
+2026-06-03 20:38:14,912 [INFO] Cleaned up 1 old backups: ['data\\backups\\attendance_backup_20260414_033432.db']
+[2026-06-03 20:38:14,917] INFO in __init__: Automatic database backup completed
+2026-06-03 20:38:14,917 [INFO] Automatic database backup completed
+Traceback (most recent call last):
+  File "C:\Users\Rizki Firmansyah\Documents\CODIBG\Face_Recognition\run.py", line 3, in <module>
+    app = create_app()
+          ^^^^^^^^^^^^
+  File "C:\Users\Rizki Firmansyah\Documents\CODIBG\Face_Recognition\app\__init__.py", line 125, in create_app
+    from app.routes.main import main_bp
+  File "C:\Users\Rizki Firmansyah\Documents\CODIBG\Face_Recognition\app\routes\main.py", line 4, in <module>
+    from app.services.camera_service import CAMERA_ENABLED, RECOGNITION_ENABLED
+  File "C:\Users\Rizki Firmansyah\Documents\CODIBG\Face_Recognition\app\services\camera_service.py", line 8, in <module>
+    import face_recognition
+  File "C:\Users\Rizki Firmansyah\Documents\CODIBG\Face_Recognition\.venv\Lib\site-packages\face_recognition\__init__.py", line 7, in <module>
+    from .api import load_image_file, face_locations, batch_face_locations, face_landmarks, face_encodings, compare_faces, face_distance
+  File "C:\Users\Rizki Firmansyah\Documents\CODIBG\Face_Recognition\.venv\Lib\site-packages\face_recognition\api.py", line 29, in <module>
+    face_encoder = dlib.face_recognition_model_v1(face_recognition_model)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+MemoryError: bad allocation

@@ -1,0 +1,315 @@
+# Setup Guide - Priority 1 Updates
+
+## 🚀 Quick Start
+
+### 1. Install Dependencies
+
+Ada beberapa cara untuk install dependencies:
+
+#### **Opsi A: Jika punya existing virtual environment dengan face_recognition**
+Jika sudah punya venv yang sudah terinstall `face_recognition` dan `dlib`, cukup install dependencies baru:
+
+```bash
+# Aktifkan venv yang sudah ada
+.venv\Scripts\activate   # Windows
+# atau
+source .venv/bin/activate  # Linux/Mac
+
+# Install dependencies baru saja
+pip install Flask-SQLAlchemy Flask-WTF python-dotenv bcrypt Flask-Migrate
+```
+
+#### **Opsi B: Install fresh (skip dlib if needed)**
+```bash
+# Install semua kecuali dlib
+pip install Flask>=3.0.0 opencv-python>=4.8.0 numpy>=1.24.0 pandas>=2.0.0 Pillow>=10.0.0 openpyxl>=3.1.0 Flask-SQLAlchemy>=3.1.1 Flask-WTF>=1.2.1 python-dotenv>=1.0.0 bcrypt>=4.1.2 Flask-Migrate>=4.0.5
+
+# Install dlib from wheel (lihat README_WEB.md untuk link download)
+# Atau skip jika sudah terinstall
+```
+
+#### **Opsi C: Using existing installation**
+Jika sudah ada face_recognition yang working, skip reinstall dan langsung jalankan aplikasi.
+
+---
+
+### 2. Migrasi Data (PENTING!)
+
+Jika Anda punya data existing di JSON/CSV, jalankan migration script:
+
+```bash
+# Backup dulu data folder!
+# Lalu jalankan:
+python migrate_data.py
+```
+
+Output yang diharapkan:
+```
+======================================================================
+ DATA MIGRATION: JSON/CSV → SQLite Database
+======================================================================
+
+[1/4] Backing up existing data...
+✓ Backed up 3 files:
+  - data/backups/students_backup_20260202_193000.json
+  - data/backups/encodings_backup_20260202_193000.pkl
+  - data/backups/attendance_backup_20260202_193000.csv
+
+[2/4] Migrating student data...
+  + STD001: John Doe
+  + STD002: Jane Smith
+✓ Migrated 2 students
+
+[3/4] Migrating attendance records...
+  + Migrated 100 records...
+✓ Migrated 150 attendance records
+
+[4/4] Verifying migration...
+  ✓ Students verified: 2
+  ✓ Attendance verified: 150
+  ✓ Latest attendance: STD001 on 2026-02-02
+
+======================================================================
+ MIGRATION COMPLETED SUCCESSFULLY!
+======================================================================
+
+✓ Database: data/attendance.db
+✓ Students: 2
+✓ Attendance: 150
+✓ Backups: data/backups/
+
+⚠ Old files are preserved in data/backups/
+  You can safely delete them after verifying the migration.
+======================================================================
+```
+
+**Jika tidak ada data existing**, migration akan membuat database kosong - ini normal!
+
+---
+
+### 3. Konfigurasi (Optional)
+
+Copy `.env.example` ke `.env` dan ubah sesuai kebutuhan:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env`:
+```env
+SECRET_KEY=ubah-ini-dengan-random-string-yang-panjang
+ENABLE_CONFIG_ADMIN_LOGIN=0
+ADMIN_PASSWORD=
+DATABASE_URI=sqlite:///data/attendance.db
+```
+
+Jika butuh fallback login emergency (tidak direkomendasikan untuk harian):
+```env
+ENABLE_CONFIG_ADMIN_LOGIN=1
+ADMIN_PASSWORD=<strong-password-atau-bcrypt-hash>
+```
+
+**Generate SECRET_KEY:**
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+---
+
+### 4. Jalankan Aplikasi
+
+```bash
+python run.py
+```
+
+Output yang diharapkan:
+```
+======================================================================
+ WEB-BASED FACE RECOGNITION ATTENDANCE SYSTEM v2.0
+======================================================================
+
+🔒 Security Features:
+  ✓ Password protection
+  ✓ CSRF protection enabled
+  ✓ Session security
+  ✓ Structured logging
+
+💾 Database:
+  ✓ SQLite: sqlite:///data/attendance.db
+
+Starting server...
+Access the application at: http://127.0.0.1:5000
+
+👤 Login menggunakan akun admin di database.
+
+Press CTRL+C to stop the server
+======================================================================
+```
+
+---
+
+## 🧪 Verification Checklist
+
+### Test Security Features
+
+- [ ] **Login System**
+  - Buka `http://localhost:5000/login`
+  - Login dengan akun admin di database
+  - Verify session persists
+  - Logout dan verify session cleared
+
+- [ ] **Health & Readiness**
+  - `GET /health` harus mengembalikan status 200
+  - `GET /ready` harus mengembalikan status 200
+
+- [ ] **CSRF Protection**
+  - Forms harus punya csrf_token hidden field
+  - POST request tanpa token harus ditolak
+
+- [ ] **Session Security**
+  - Coba akses `/add_student` tanpa login
+  - Harus redirect ke login page
+
+### Test Database Features
+
+- [ ] **Add Student**
+  - Tambah siswa baru
+  - Check database: `data/attendance.db` file dibuat
+  - Verify data tersimpan
+
+- [ ] **Delete Student**
+  - Hapus siswa dari halaman students
+  - Verify confirmation dialog muncul
+  - Check database (soft delete: is_active=False)
+
+- [ ] **Mark Attendance**
+  - Mark attendance via webcam
+  - Verify data masuk ke database
+  - Check tidak bisa absen dua kali di hari yang sama
+
+- [ ] **Reports**
+  - View today's attendance
+  - Export to Excel
+  - Verify data lengkap
+
+### Test Data Migration
+
+- [ ] **If you had existing data:**
+  - Verify semua students ter-migrate
+  - Verify semua attendance records ter-migrate
+  - Check tanggal dan waktu correct
+  - Compare count dengan backup files
+
+---
+
+## 📊 Database Schema
+
+### Students Table
+```
+id              INTEGER PRIMARY KEY
+student_id      VARCHAR(50) UNIQUE NOT NULL
+name            VARCHAR(200) NOT NULL
+class_name      VARCHAR(50) NOT NULL
+num_photos      INTEGER
+photos_path     TEXT (JSON)
+face_encodings  BLOB (Pickled)
+is_active       BOOLEAN DEFAULT TRUE
+added_date      DATE
+created_at      DATETIME
+updated_at      DATETIME
+```
+
+### Attendance Table
+```
+id              INTEGER PRIMARY KEY
+student_id      VARCHAR(50) FOREIGN KEY
+date            DATE NOT NULL
+time            TIME NOT NULL
+status          VARCHAR(20) DEFAULT 'Present'
+confidence      FLOAT
+marked_by       VARCHAR(20) DEFAULT 'auto'
+notes           TEXT
+created_at      DATETIME
+```
+
+### Settings Table
+```
+id              INTEGER PRIMARY KEY
+key             VARCHAR(100) UNIQUE
+value           TEXT
+description     TEXT
+updated_at      DATETIME
+```
+
+---
+
+## 🔍 Troubleshooting
+
+### Error: "No module named 'flask_sqlalchemy'"
+```bash
+pip install Flask-SQLAlchemy
+```
+
+### Error: "CSRF token missing"
+Pastikan semua forms punya:
+```html
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+```
+
+### Error: "Database is locked"
+- Tutup semua koneksi ke database
+- Restart aplikasi
+- Check tidak ada process lain yang buka database file
+
+### Migration gagal
+- Check backup di `data/backups/`
+- Restore manual jika perlu
+- Check error message di console
+- Verify JSON/CSV format correct
+
+### Tidak bisa login
+- Gunakan akun admin yang tersimpan di tabel `users`
+- Jika emergency fallback dipakai, pastikan `ENABLE_CONFIG_ADMIN_LOGIN=1` dan `ADMIN_PASSWORD` terisi
+- Clear browser cookies dan try lagi
+
+---
+
+## 📝 Important Notes
+
+### Security Reminders
+- ✅ CSRF protection enabled untuk semua forms
+- ✅ Passwords di-hash dengan bcrypt (future feature)
+- ✅ Session cookies are HTTP-only
+- ✅ Security headers automatically added
+- ⚠️ Gunakan HTTPS di production
+- ⚠️ Change SECRET_KEY di production
+
+### Database Best Practices
+- ✅ Regular backups automatically via backup function
+- ✅ Soft delete untuk students (is_active flag)
+- ✅ Foreign key constraints enabled
+- ✅ Indexed columns for performance
+- ⚠️ Backup database secara manual juga
+
+### Migration Safety
+- ✅ Original files preserved di `data/backups/`
+- ✅ Migration script bisa dijalankan multiple times
+- ✅ Existing records di-skip (tidak duplicate)
+- ⚠️ Always backup sebelum migration
+
+---
+
+## 🎯 Next Steps
+
+Setelah verifikasi Phase 1 sukses, lanjut ke **Phase 2**:
+- [ ] Attendance settings (late threshold, session times)
+- [ ] Advanced reporting dengan charts
+- [ ] Bulk import students
+- [ ] PDF reports
+
+---
+
+**Jika ada masalah, check:**
+1. `data/app.log` - Application logs
+2. Console output saat run `python run.py`
+3. Browser console untuk JavaScript errors

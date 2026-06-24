@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Edit Siswa</h1>
+<p class="muted">Ubah data siswa.</p>
+
+<form action="{{ url_for('students.edit_student', student_id=student.student_id) }}" method="post" enctype="multipart/form-data"
+    class="card" style="max-width:800px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+        <!-- Info Section -->
+        <div style="flex: 1; min-width: 300px;">
+            <div style="font-weight: 700; margin-bottom: 15px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
+                Data Siswa</div>
+
+            <div style="margin-bottom:12px;">
+                <label for="student_id" style="display:block; font-weight:700; margin-bottom:6px;">NISN / Identification ID</label>
+                <input id="student_id" name="student_id" type="text" value="{{ student.student_id }}" required
+                    style="width:100%; border: 1px solid #e5e7eb; border-radius: 4px;" />
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <label for="gender" style="display:block; font-weight:700; margin-bottom:6px;">Jenis Kelamin</label>
+                <select id="gender" name="gender" required
+                    style="width:100%; border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px;">
+                    <option value="">Pilih jenis kelamin...</option>
+                    <option value="Laki-laki" {% if student.gender == 'Laki-laki' %}selected{% endif %}>Laki-laki</option>
+                    <option value="Perempuan" {% if student.gender == 'Perempuan' %}selected{% endif %}>Perempuan</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <label for="name" style="display:block; font-weight:700; margin-bottom:6px;">Nama</label>
+                <input id="name" name="name" type="text" value="{{ student.name }}" required
+                    style="width:100%; border: 1px solid #e5e7eb; border-radius: 4px;" />
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label for="class_name" style="display:block; font-weight:700; margin-bottom:6px;">Kelas</label>
+                <input id="class_name" name="class_name" type="text" value="{{ student.class_name }}" required
+                    style="width:100%; border: 1px solid #e5e7eb; border-radius: 4px;" />
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <label for="birth_place" style="display:block; font-weight:700; margin-bottom:6px;">Tempat Lahir</label>
+                <input id="birth_place" name="birth_place" type="text" value="{{ student.birth_place or '' }}" required
+                    style="width:100%; border: 1px solid #e5e7eb; border-radius: 4px;" />
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <label for="birth_date" style="display:block; font-weight:700; margin-bottom:6px;">Tanggal Lahir</label>
+                <input id="birth_date" name="birth_date" type="date" value="{{ student.birth_date.strftime('%Y-%m-%d') if student.birth_date else '' }}" required
+                    style="width:100%; border: 1px solid #e5e7eb; border-radius: 4px;" />
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <label for="religion" style="display:block; font-weight:700; margin-bottom:6px;">Agama</label>
+                <input id="religion" name="religion" type="text" value="{{ student.religion or '' }}" required
+                    style="width:100%; border: 1px solid #e5e7eb; border-radius: 4px;" />
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label for="address" style="display:block; font-weight:700; margin-bottom:6px;">Alamat</label>
+                <textarea id="address" name="address" rows="3" required
+                    style="width:100%; border: 1px solid #e5e7eb; border-radius: 4px;">{{ student.address or '' }}</textarea>
+            </div>
+
+            <div style="margin-bottom:20px; padding: 15px; background: #f9fafb; border-radius: 8px;">
+                <label for="new_photos" style="display:block; font-weight:700; margin-bottom:8px;">Tambah Foto
+                    Baru</label>
+                <input type="file" name="new_photos" id="new_photos" multiple accept="image/*" style="width: 100%;" />
+                <div class="muted" style="font-size: 0.8em; margin-top: 5px;">Maksimal {{ max_photos|default(50) }} foto total per siswa.</div>
+            </div>
+
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button type="submit" class="btn" style="background: #3b82f6;">Simpan Perubahan</button>
+                <a href="{{ url_for('students.students') }}" class="muted" style="text-decoration:none;">Batal</a>
+            </div>
+        </div>
+
+        <!-- Photos Section -->
+        <div style="flex: 1; min-width: 300px;">
+            <div style="font-weight: 700; margin-bottom: 15px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">
+                Foto Terdaftar ({{ photos|length }})</div>
+
+            {% if photos %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px;">
+                {% for photo in photos %}
+                <div style="position: relative; border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb;">
+                    <img src="{{ url_for('students.serve_student_photo', filename=photo.replace('data\\students\\', '').replace('data/students/', '').replace('\\', '/')) }}"
+                        style="width: 100%; aspect-ratio: 1/1; object-fit: cover;"
+                        onerror="this.src='{{ url_for('static', filename='uploads/placeholder-student.svg') }}';">
+                    <button type="submit" name="delete_photo" value="{{ photo }}"
+                        style="position: absolute; top: 2px; right: 2px; background: rgba(239, 68, 68, 0.9); color: white; border: none; border-radius: 4px; padding: 2px 6px; font-size: 10px; cursor: pointer;"
+                        onclick="return confirm('Hapus foto ini?')">✕</button>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="muted" style="text-align: center; padding: 40px 0;">Belum ada foto.</div>
+            {% endif %}
+        </div>
+    </div>
+</form>
+{% endblock %}

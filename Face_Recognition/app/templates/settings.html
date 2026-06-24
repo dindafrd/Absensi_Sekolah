@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .settings-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .settings-section {
+        margin-bottom: 2.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .settings-section:last-child {
+        border-bottom: none;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .section-header h3 {
+        font-size: 1.125rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .section-header svg {
+        color: var(--accent);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <div style="margin-bottom: 2.5rem;">
+        <h1 style="font-size: 1.875rem; font-weight: 800; letter-spacing: -0.025em;">System Preferences</h1>
+        <p style="color: var(--text-muted);">Configure session schedules, enforcement rules, and recognition parameters.
+        </p>
+    </div>
+
+    <form action="{{ url_for('main.settings') }}" method="post" class="card">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        <!-- Session Management -->
+        <div class="settings-section">
+            <div class="section-header">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                </svg>
+                <h3>Session Schedules</h3>
+            </div>
+
+            <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                <div class="input-group">
+                    <label>Morning Shift Start</label>
+                    <input name="morning_session_start" type="time" value="{{ settings.morning_session_start }}"
+                        required />
+                </div>
+                <div class="input-group">
+                    <label>Morning Shift End</label>
+                    <input name="morning_session_end" type="time" value="{{ settings.morning_session_end }}" required />
+                </div>
+            </div>
+
+            <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div class="input-group">
+                    <label>Afternoon Shift Start</label>
+                    <input name="afternoon_session_start" type="time" value="{{ settings.afternoon_session_start }}"
+                        required />
+                </div>
+                <div class="input-group">
+                    <label>Afternoon Shift End</label>
+                    <input name="afternoon_session_end" type="time" value="{{ settings.afternoon_session_end }}"
+                        required />
+                </div>
+            </div>
+        </div>
+
+        <!-- Punctuality Rules -->
+        <div class="settings-section">
+            <div class="section-header">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 15h2a2 2 0 1 0 0-4h-2a2 2 0 1 1 0-4h2" />
+                    <path d="M12 17v2" />
+                    <path d="M12 5v2" />
+                    <circle cx="12" cy="12" r="10" />
+                </svg>
+                <h3>Punctuality Rules</h3>
+            </div>
+
+            <div class="input-group">
+                <label>Grace Period (Minutes)</label>
+                <div style="position: relative;">
+                    <input name="late_threshold_minutes" type="number" value="{{ settings.late_threshold_minutes }}"
+                        required style="padding-right: 4rem;" />
+                    <span
+                        style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); font-size: 0.75rem; font-weight: 700; color: var(--text-muted); pointer-events: none;">MINS</span>
+                </div>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Students are marked as
+                    "Late" after (Session Start + Grace Period).</p>
+            </div>
+        </div>
+
+        <!-- Security & Recognition -->
+        <div class="settings-section">
+            <div class="section-header">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+                </svg>
+                <h3>Engine Control</h3>
+            </div>
+
+            <div
+                style="background: rgba(255, 255, 255, 0.02); padding: 1rem; border-radius: 0.75rem; border: 1px solid var(--border); display: flex; align-items: flex-start; gap: 1rem;">
+                <input type="checkbox" name="attendance_enabled" id="attendance_enabled" {% if
+                    settings.attendance_enabled=='true' %}checked{% endif %}
+                    style="width: 20px; height: 20px; margin-top: 0.25rem;" />
+                <label for="attendance_enabled" style="margin-bottom: 0; cursor: pointer;">
+                    <div style="font-weight: 700; font-size: 0.875rem;">Enable Biometric Attendance</div>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">If disabled, the
+                        camera will still function but records will not be committed to the database.</p>
+                </label>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; align-items: center; justify-content: flex-end; margin-top: 1rem;">
+            <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Discard Changes</a>
+            <button type="submit" class="btn btn-primary">Save Preferences</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

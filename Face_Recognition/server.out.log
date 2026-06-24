@@ -1,0 +1,99 @@
+2026-06-03 20:38:14,752 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-06-03 20:38:14,752 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("users")
+2026-06-03 20:38:14,752 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-06-03 20:38:14,760 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("students")
+2026-06-03 20:38:14,762 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-06-03 20:38:14,762 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("attendance")
+2026-06-03 20:38:14,762 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-06-03 20:38:14,762 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("settings")
+2026-06-03 20:38:14,768 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-06-03 20:38:14,768 INFO sqlalchemy.engine.Engine COMMIT
+2026-06-03 20:38:14,771 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-06-03 20:38:14,771 INFO sqlalchemy.engine.Engine SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite~_%' ESCAPE '~' ORDER BY name
+2026-06-03 20:38:14,771 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-06-03 20:38:14,771 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-06-03 20:38:14,771 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-06-03 20:38:14,771 INFO sqlalchemy.engine.Engine PRAGMA main.table_xinfo("students")
+2026-06-03 20:38:14,771 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-06-03 20:38:14,771 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-06-03 20:38:14,783 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-06-03 20:38:14,783 INFO sqlalchemy.engine.Engine SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite~_%' ESCAPE '~' ORDER BY name
+2026-06-03 20:38:14,783 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-06-03 20:38:14,787 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-06-03 20:38:14,787 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-06-03 20:38:14,787 INFO sqlalchemy.engine.Engine PRAGMA main.index_list("attendance")
+2026-06-03 20:38:14,787 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-06-03 20:38:14,793 INFO sqlalchemy.engine.Engine PRAGMA main.index_info("idx_student_date")
+2026-06-03 20:38:14,793 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-06-03 20:38:14,795 INFO sqlalchemy.engine.Engine PRAGMA main.index_info("ix_attendance_date")
+2026-06-03 20:38:14,795 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-06-03 20:38:14,795 INFO sqlalchemy.engine.Engine PRAGMA main.index_info("ix_attendance_student_id")
+2026-06-03 20:38:14,795 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-06-03 20:38:14,795 INFO sqlalchemy.engine.Engine SELECT sql FROM  (SELECT * FROM sqlite_master UNION ALL   SELECT * FROM sqlite_temp_master) WHERE name = ? AND type in ('table', 'view')
+2026-06-03 20:38:14,799 INFO sqlalchemy.engine.Engine [raw sql] ('attendance',)
+2026-06-03 20:38:14,803 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-06-03 20:38:14,803 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-06-03 20:38:14,803 INFO sqlalchemy.engine.Engine 
+                DELETE FROM attendance 
+                WHERE id NOT IN (
+                    SELECT MIN(id) 
+                    FROM attendance 
+                    GROUP BY student_id, date, session_type
+                )
+            
+2026-06-03 20:38:14,807 INFO sqlalchemy.engine.Engine [generated in 0.00121s] ()
+2026-06-03 20:38:14,807 INFO sqlalchemy.engine.Engine COMMIT
+2026-06-03 20:38:14,807 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-06-03 20:38:14,811 INFO sqlalchemy.engine.Engine 
+                ALTER TABLE attendance 
+                ADD CONSTRAINT uq_student_date_session 
+                UNIQUE (student_id, date, session_type)
+            
+2026-06-03 20:38:14,812 INFO sqlalchemy.engine.Engine [generated in 0.00120s] ()
+2026-06-03 20:38:14,812 INFO sqlalchemy.engine.Engine ROLLBACK
+Warning: Could not add unique constraint: (sqlite3.OperationalError) near "CONSTRAINT": syntax error
+[SQL: 
+                ALTER TABLE attendance 
+                ADD CONSTRAINT uq_student_date_session 
+                UNIQUE (student_id, date, session_type)
+            ]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-06-03 20:38:14,830 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-06-03 20:38:14,836 INFO sqlalchemy.engine.Engine SELECT settings.id AS settings_id, settings."key" AS settings_key, settings.value AS settings_value, settings.description AS settings_description, settings.updated_at AS settings_updated_at 
+FROM settings 
+WHERE settings."key" = ?
+ LIMIT ? OFFSET ?
+2026-06-03 20:38:14,836 INFO sqlalchemy.engine.Engine [generated in 0.00096s] ('late_threshold_minutes', 1, 0)
+2026-06-03 20:38:14,841 INFO sqlalchemy.engine.Engine SELECT settings.id AS settings_id, settings."key" AS settings_key, settings.value AS settings_value, settings.description AS settings_description, settings.updated_at AS settings_updated_at 
+FROM settings 
+WHERE settings."key" = ?
+ LIMIT ? OFFSET ?
+2026-06-03 20:38:14,841 INFO sqlalchemy.engine.Engine [cached since 0.006103s ago] ('morning_session_start', 1, 0)
+2026-06-03 20:38:14,845 INFO sqlalchemy.engine.Engine SELECT settings.id AS settings_id, settings."key" AS settings_key, settings.value AS settings_value, settings.description AS settings_description, settings.updated_at AS settings_updated_at 
+FROM settings 
+WHERE settings."key" = ?
+ LIMIT ? OFFSET ?
+2026-06-03 20:38:14,845 INFO sqlalchemy.engine.Engine [cached since 0.01063s ago] ('morning_session_end', 1, 0)
+2026-06-03 20:38:14,845 INFO sqlalchemy.engine.Engine SELECT settings.id AS settings_id, settings."key" AS settings_key, settings.value AS settings_value, settings.description AS settings_description, settings.updated_at AS settings_updated_at 
+FROM settings 
+WHERE settings."key" = ?
+ LIMIT ? OFFSET ?
+2026-06-03 20:38:14,845 INFO sqlalchemy.engine.Engine [cached since 0.0135s ago] ('afternoon_session_start', 1, 0)
+2026-06-03 20:38:14,845 INFO sqlalchemy.engine.Engine SELECT settings.id AS settings_id, settings."key" AS settings_key, settings.value AS settings_value, settings.description AS settings_description, settings.updated_at AS settings_updated_at 
+FROM settings 
+WHERE settings."key" = ?
+ LIMIT ? OFFSET ?
+2026-06-03 20:38:14,845 INFO sqlalchemy.engine.Engine [cached since 0.0163s ago] ('afternoon_session_end', 1, 0)
+2026-06-03 20:38:14,858 INFO sqlalchemy.engine.Engine SELECT settings.id AS settings_id, settings."key" AS settings_key, settings.value AS settings_value, settings.description AS settings_description, settings.updated_at AS settings_updated_at 
+FROM settings 
+WHERE settings."key" = ?
+ LIMIT ? OFFSET ?
+2026-06-03 20:38:14,858 INFO sqlalchemy.engine.Engine [cached since 0.0237s ago] ('attendance_enabled', 1, 0)
+2026-06-03 20:38:14,862 INFO sqlalchemy.engine.Engine COMMIT
+2026-06-03 20:38:14,862 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-06-03 20:38:14,867 INFO sqlalchemy.engine.Engine SELECT users.id AS users_id, users.username AS users_username, users.password_hash AS users_password_hash, users.full_name AS users_full_name, users.role AS users_role, users.is_active AS users_is_active, users.created_at AS users_created_at, users.last_login AS users_last_login 
+FROM users 
+WHERE users.username = ?
+ LIMIT ? OFFSET ?
+2026-06-03 20:38:14,867 INFO sqlalchemy.engine.Engine [generated in 0.00109s] ('admin', 1, 0)
+2026-06-03 20:38:14,871 INFO sqlalchemy.engine.Engine ROLLBACK
